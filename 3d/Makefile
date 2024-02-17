@@ -1,4 +1,4 @@
-CXX = g++ -g -Wall -Wfatal-errors -O3 -fopenmp
+CXX = g++-13 -g -Wall -Wfatal-errors -O3 -fopenmp
 
 all:
 	@make kernel

@@ -9,7 +9,7 @@
 using namespace exafmm;
 
 int main(int argc, char ** argv) {
-  const int numBodies = 10000;                                  // Number of bodies
+  const int numBodies = 1'00'000;                                  // Number of bodies
   P = 10;                                                       // Order of expansions
   ncrit = 64;                                                   // Number of bodies per leaf cell
   theta = 0.4;                                                  // Multipole acceptance criterion
