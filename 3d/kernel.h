@@ -115,7 +115,7 @@ namespace exafmm
 
   void initKernel()
   {
-    NTERM = (P * (P + 1) / 2);
+    NTERM = 3 * (P * (P + 1) / 2);
     prefactor.resize(4 * P * P);
     Anm.resize(4 * P * P);
     Cnm.resize(P * P * P * P);
@@ -211,7 +211,7 @@ namespace exafmm
           {
             int nm = n * n + n + m;
             int nms = n * (n + 1) / 2 + m;
-            C->M[nms] += B->q * Ynm[nm];
+            C->M[3*nms] += B->q * Ynm[nm];
           }
         }
       }
@@ -245,7 +245,7 @@ namespace exafmm
                   int jnkm = (j - n) * (j - n) + j - n + k - m;
                   int jnkms = (j - n) * (j - n + 1) / 2 + k - m;
                   int nm = n * n + n + m;
-                  M += Cj->M[jnkms] * std::pow(I, real_t(m - abs(m))) * Ynm[nm] * real_t(oddOrEven(n) * Anm[nm] * Anm[jnkm] / Anm[jk]);
+                  M += Cj->M[3*jnkms] * std::pow(I, real_t(m - abs(m))) * Ynm[nm] * real_t(oddOrEven(n) * Anm[nm] * Anm[jnkm] / Anm[jk]);
                 }
               }
               for (int m = k; m <= n; m++)
@@ -255,11 +255,11 @@ namespace exafmm
                   int jnkm = (j - n) * (j - n) + j - n + k - m;
                   int jnkms = (j - n) * (j - n + 1) / 2 - k + m;
                   int nm = n * n + n + m;
-                  M += std::conj(Cj->M[jnkms]) * Ynm[nm] * real_t(oddOrEven(k + n + m) * Anm[nm] * Anm[jnkm] / Anm[jk]);
+                  M += std::conj(Cj->M[3*jnkms]) * Ynm[nm] * real_t(oddOrEven(k + n + m) * Anm[nm] * Anm[jnkm] / Anm[jk]);
                 }
               }
             }
-            Ci->M[jks] += M * EPS;
+            Ci->M[3*jks] += M * EPS;
           }
         }
       }
@@ -289,7 +289,7 @@ namespace exafmm
             int nms = n * (n + 1) / 2 - m;
             int jknm = jk * P * P + nm;
             int jnkm = (j + n) * (j + n) + j + n + m - k;
-            L += std::conj(Cj->M[nms]) * Cnm[jknm] * Ynm2[jnkm];
+            L += std::conj(Cj->M[3*nms]) * Cnm[jknm] * Ynm2[jnkm];
           }
           for (int m = 0; m <= n; m++)
           {
@@ -297,10 +297,10 @@ namespace exafmm
             int nms = n * (n + 1) / 2 + m;
             int jknm = jk * P * P + nm;
             int jnkm = (j + n) * (j + n) + j + n + m - k;
-            L += Cj->M[nms] * Cnm[jknm] * Ynm2[jnkm];
+            L += Cj->M[3*nms] * Cnm[jknm] * Ynm2[jnkm];
           }
         }
-        Ci->L[jks] += L;
+        Ci->L[3*jks] += L;
       }
     }
   }
@@ -329,7 +329,7 @@ namespace exafmm
               int jnkm = (n - j) * (n - j) + n - j + m - k;
               int nm = n * n + n - m;
               int nms = n * (n + 1) / 2 - m;
-              L += std::conj(Cj->L[nms]) * Ynm[jnkm] * real_t(oddOrEven(k) * Anm[jnkm] * Anm[jk] / Anm[nm]);
+              L += std::conj(Cj->L[3*nms]) * Ynm[jnkm] * real_t(oddOrEven(k) * Anm[jnkm] * Anm[jk] / Anm[nm]);
             }
             for (int m = 0; m <= n; m++)
             {
@@ -338,50 +338,52 @@ namespace exafmm
                 int jnkm = (n - j) * (n - j) + n - j + m - k;
                 int nm = n * n + n + m;
                 int nms = n * (n + 1) / 2 + m;
-                L += Cj->L[nms] * std::pow(I, real_t(m - k - abs(m - k))) * Ynm[jnkm] * Anm[jnkm] * Anm[jk] / Anm[nm];
+                L += Cj->L[3*nms] * std::pow(I, real_t(m - k - abs(m - k))) * Ynm[jnkm] * Anm[jnkm] * Anm[jk] / Anm[nm];
               }
             }
           }
-          Ci->L[jks] += L * EPS;
+          Ci->L[3*jks] += L * EPS;
         }
       }
     }
   }
 
-  void L2P(Cell *Ci){
-      {complex_t Ynm[P * P], YnmTheta[P * P];
-  for (Body *B = Ci->BODY; B != Ci->BODY + Ci->NBODY; B++)
+  void L2P(Cell *Ci)
   {
-    for (int d = 0; d < 3; d++)
-      dX[d] = B->X[d] - Ci->X[d];
-    real_t spherical[3]{0, 0, 0};
-    real_t cartesian[3]{0, 0, 0};
-    real_t r, theta, phi;
-    cart2sph(dX, r, theta, phi);
-    evalMultipole(r, theta, phi, Ynm, YnmTheta);
-    for (int n = 0; n < P; n++)
     {
-      int nm = n * n + n;
-      int nms = n * (n + 1) / 2;
-      B->p += std::real(Ci->L[nms] * Ynm[nm]);
-      spherical[0] += std::real(Ci->L[nms] * Ynm[nm]) / r * n;
-      spherical[1] += std::real(Ci->L[nms] * YnmTheta[nm]);
-      for (int m = 1; m <= n; m++)
+      complex_t Ynm[P * P], YnmTheta[P * P];
+      for (Body *B = Ci->BODY; B != Ci->BODY + Ci->NBODY; B++)
       {
-        nm = n * n + n + m;
-        nms = n * (n + 1) / 2 + m;
-        B->p += 2 * std::real(Ci->L[nms] * Ynm[nm]);
-        spherical[0] += 2 * std::real(Ci->L[nms] * Ynm[nm]) / r * n;
-        spherical[1] += 2 * std::real(Ci->L[nms] * YnmTheta[nm]);
-        spherical[2] += 2 * std::real(Ci->L[nms] * Ynm[nm] * I) * m;
+        for (int d = 0; d < 3; d++)
+          dX[d] = B->X[d] - Ci->X[d];
+        real_t spherical[3]{0, 0, 0};
+        real_t cartesian[3]{0, 0, 0};
+        real_t r, theta, phi;
+        cart2sph(dX, r, theta, phi);
+        evalMultipole(r, theta, phi, Ynm, YnmTheta);
+        for (int n = 0; n < P; n++)
+        {
+          int nm = n * n + n;
+          int nms = n * (n + 1) / 2;
+          B->p += std::real(Ci->L[3*nms] * Ynm[nm]);
+          spherical[0] += std::real(Ci->L[3*nms] * Ynm[nm]) / r * n;
+          spherical[1] += std::real(Ci->L[3*nms] * YnmTheta[nm]);
+          for (int m = 1; m <= n; m++)
+          {
+            nm = n * n + n + m;
+            nms = n * (n + 1) / 2 + m;
+            B->p += 2 * std::real(Ci->L[3*nms] * Ynm[nm]);
+            spherical[0] += 2 * std::real(Ci->L[3*nms] * Ynm[nm]) / r * n;
+            spherical[1] += 2 * std::real(Ci->L[3*nms] * YnmTheta[nm]);
+            spherical[2] += 2 * std::real(Ci->L[3*nms] * Ynm[nm] * I) * m;
+          }
+        }
+        sph2cart(r, theta, phi, spherical, cartesian);
+        B->F[0] += cartesian[0];
+        B->F[1] += cartesian[1];
+        B->F[2] += cartesian[2];
       }
     }
-    sph2cart(r, theta, phi, spherical, cartesian);
-    B->F[0] += cartesian[0];
-    B->F[1] += cartesian[1];
-    B->F[2] += cartesian[2];
   }
-}
-}
 }
 #endif
