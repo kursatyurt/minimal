@@ -10,6 +10,15 @@ kernel: kernel.cxx
 	./kernel 20
 	./kernel 30
 	./kernel 40
+	./kernel 50
+	./kernel 60
+	./kernel 70
+	./kernel 80
+	./kernel 90
+	./kernel 100
+	./kernel 110
+	./kernel 120
+	./kernel 130
 
 fmm: fmm.cxx
 	$(CXX) $? -o $@ -DEXAFMM_EAGER
