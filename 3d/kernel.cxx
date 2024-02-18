@@ -11,7 +11,7 @@ int main(int argc, char **argv)
   for (int d = 0; d < 3; d++)
     jbodies[0].X[d] = 2;
   for (int d = 0; d < 3; d++)
-    jbodies[0].q[d] = 1;
+    jbodies[0].alpha[d] = 1;
   Cells cells(4);
   Cell *Cj = &cells[0];
   Cj->X[0] = 3;
@@ -59,12 +59,12 @@ int main(int argc, char **argv)
   bodies[0].X[0] = -2;
   bodies[0].X[1] = 2;
   bodies[0].X[2] = 2;
-  bodies[0].q[0] = 1;
-  bodies[0].q[1] = 1;
-  bodies[0].q[2] = 1;
+  bodies[0].alpha[0] = 1;
+  bodies[0].alpha[1] = 1;
+  bodies[0].alpha[2] = 1;
   bodies[0].p = 0;
   for (int d = 0; d < 3; d++)
-    bodies[0].F[d] = 0;
+    bodies[0].velocity[d] = 0;
   Ci->BODY = &bodies[0];
   Ci->NBODY = bodies.size();
   L2P(Ci);
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     bodies2[b] = bodies[b];
     bodies2[b].p = 0;
     for (int d = 0; d < 3; d++)
-      bodies2[b].F[d] = 0;
+      bodies2[b].velocity[d] = 0;
   }
   Cj->NBODY = jbodies.size();
   Ci->NBODY = bodies2.size();
@@ -89,11 +89,11 @@ int main(int argc, char **argv)
   {
     pDif += (bodies[b].p - bodies2[b].p) * (bodies[b].p - bodies2[b].p);
     pNrm += bodies[b].p * bodies[b].p;
-    FDif += (bodies[b].F[0] - bodies2[b].F[0]) * (bodies[b].F[0] - bodies2[b].F[0]) +
-            (bodies[b].F[1] - bodies2[b].F[1]) * (bodies[b].F[1] - bodies2[b].F[1]) +
-            (bodies[b].F[2] - bodies2[b].F[2]) * (bodies[b].F[2] - bodies2[b].F[2]);
-    FNrm += bodies[b].F[0] * bodies[b].F[0] + bodies[b].F[1] * bodies[b].F[1] +
-            bodies[b].F[2] * bodies[b].F[2];
+    FDif += (bodies[b].velocity[0] - bodies2[b].velocity[0]) * (bodies[b].velocity[0] - bodies2[b].velocity[0]) +
+            (bodies[b].velocity[1] - bodies2[b].velocity[1]) * (bodies[b].velocity[1] - bodies2[b].velocity[1]) +
+            (bodies[b].velocity[2] - bodies2[b].velocity[2]) * (bodies[b].velocity[2] - bodies2[b].velocity[2]);
+    FNrm += bodies[b].velocity[0] * bodies[b].velocity[0] + bodies[b].velocity[1] * bodies[b].velocity[1] +
+            bodies[b].velocity[2] * bodies[b].velocity[2];
   }
   printf("%-20s : %8.5e s\n", "Rel. L2 Error (p)", sqrt(pDif / pNrm));
   printf("%-20s : %8.5e s\n", "Rel. L2 Error (F)", sqrt(FDif / FNrm));

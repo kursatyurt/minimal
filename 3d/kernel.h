@@ -182,15 +182,15 @@ namespace exafmm
           //      real cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf( std::sqrt(RS) )// cutoff function
           //                  - std::sqrt(4 / M_PI * RS) * exp(-RS));
           real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2);
-          ax += (dX[1] * Bj[j].q[2] - dX[2] * Bj[j].q[1]) * cutoff; // x component of curl G * cutoff
-          ay += (dX[2] * Bj[j].q[0] - dX[0] * Bj[j].q[2]) * cutoff; // y component of curl G * cutoff
-          az += (dX[0] * Bj[j].q[1] - dX[1] * Bj[j].q[0]) * cutoff; // z component of curl G * cutof
+          ax += (dX[1] * Bj[j].alpha[2] - dX[2] * Bj[j].alpha[1]) * cutoff; // x component of curl G * cutoff
+          ay += (dX[2] * Bj[j].alpha[0] - dX[0] * Bj[j].alpha[2]) * cutoff; // y component of curl G * cutoff
+          az += (dX[0] * Bj[j].alpha[1] - dX[1] * Bj[j].alpha[0]) * cutoff; // z component of curl G * cutof
         }
       }
       Bi[i].p += pot;
-      Bi[i].F[0] -= ax;
-      Bi[i].F[1] -= ay;
-      Bi[i].F[2] -= az;
+      Bi[i].velocity[0] -= ax;
+      Bi[i].velocity[1] -= ay;
+      Bi[i].velocity[2] -= az;
     }
   }
 
@@ -213,7 +213,7 @@ namespace exafmm
             int nms = n * (n + 1) / 2 + m;
             for (int d = 0; d < 3; d++)
             {
-              C->M[3 * nms + d] += B->q[d] * Ynm[nm];
+              C->M[3 * nms + d] += B->alpha[d] * Ynm[nm];
             }
           }
         }
@@ -416,9 +416,9 @@ namespace exafmm
         {
           sph2cart(r, theta, phi, spherical[d], cartesian[d]);
         }
-        B->F[0] += 0.25 / M_PI * (cartesian[2][1] - cartesian[1][2]);
-        B->F[1] += 0.25 / M_PI * (cartesian[0][2] - cartesian[2][0]);
-        B->F[2] += 0.25 / M_PI * (cartesian[1][0] - cartesian[0][1]);
+        B->velocity[0] += 0.25 / M_PI * (cartesian[2][1] - cartesian[1][2]);
+        B->velocity[1] += 0.25 / M_PI * (cartesian[0][2] - cartesian[2][0]);
+        B->velocity[2] += 0.25 / M_PI * (cartesian[1][0] - cartesian[0][1]);
       }
     }
   }
