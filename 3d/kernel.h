@@ -167,6 +167,7 @@ namespace exafmm
     int nj = Cj->NBODY;
     for (int i = 0; i < ni; i++)
     {
+      // real_t pot = 0;
       real_t ax = 0;
       real_t ay = 0;
       real_t az = 0;
@@ -177,7 +178,7 @@ namespace exafmm
         real_t R2 = norm(dX);
         if (R2 != 0)
         {
-          real_t S2 = 2 * Bj[j].radius * Bj[j].radius;                           //   2 * simga^2
+          real_t S2 = 2;                                                         //   2 * simga^2
           real_t RS = R2 / S2;                                                   //   R^2 / (2 * sigma^2)
           real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf(std::sqrt(RS)) // cutoff function for first term
                                                               - std::sqrt(4 / M_PI * RS) * exp(-RS));
@@ -198,6 +199,7 @@ namespace exafmm
           az += (Bj[j].alpha[0] * dX[1] - Bj[j].alpha[1] * dX[0]) * cutoff; // z component of second term
         }
       }
+      // Bi[i].p += pot;
       Bi[i].dadt[0] -= ax;
       Bi[i].dadt[1] -= ay;
       Bi[i].dadt[2] -= az;
@@ -274,9 +276,9 @@ namespace exafmm
         {
           sph2cart(r, theta, phi, spherical[d], cartesian[d]);
         }
-        B->dadt[0] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][0] + B->alpha[1] * cartesian[1][0] + B->alpha[2] * cartesian[2][0]);
-        B->dadt[1] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][1] + B->alpha[1] * cartesian[1][1] + B->alpha[2] * cartesian[2][1]);
-        B->dadt[2] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][2] + B->alpha[1] * cartesian[1][2] + B->alpha[2] * cartesian[2][2]);
+        B->dadt[0] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][0] + B->alpha[1] * cartesian[0][1] + B->alpha[2] * cartesian[0][2]);
+        B->dadt[1] += 0.25 / M_PI * (B->alpha[0] * cartesian[1][0] + B->alpha[1] * cartesian[1][1] + B->alpha[2] * cartesian[1][2]);
+        B->dadt[2] += 0.25 / M_PI * (B->alpha[0] * cartesian[2][0] + B->alpha[1] * cartesian[2][1] + B->alpha[2] * cartesian[2][2]);
       }
     }
   }
