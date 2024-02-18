@@ -52,10 +52,11 @@ namespace exafmm
             buffer[i].X[d] = bodies[i].X[d]; //  Copy bodies coordinates to buffer
           for (int d = 0; d < 3; d++)
             buffer[i].alpha[d] = bodies[i].alpha[d]; //    Copy bodies source to buffer
-        }                                    //   End loop over bodies in cell
-      }                                      //  End if for direction of data
-      return;                                //  Return without recursion
-    }                                        // End if for number of bodies
+          buffer[i].radius = bodies[i].radius; //    Copy bodies source to buffer
+        }                                      //   End loop over bodies in cell
+      }                                        //  End if for direction of data
+      return;                                  //  Return without recursion
+    }                                          // End if for number of bodies
     //! Count number of bodies in each octant
     int size[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     real_t x[3]; // Coordinates of bodies
@@ -88,8 +89,9 @@ namespace exafmm
         buffer[counter[octant]].X[d] = bodies[i].X[d]; // Permute bodies coordinates out-of-place according to octant
       for (int d = 0; d < 3; d++)
         buffer[counter[octant]].alpha[d] = bodies[i].alpha[d]; //  Permute bodies sources out-of-place according to octant
-      counter[octant]++;                               //  Increment body count in octant
-    }                                                  // End loop over bodies
+      buffer[counter[octant]].radius = bodies[i].radius;       //  Permute bodies sources out-of-place according to octant
+      counter[octant]++;                                       //  Increment body count in octant
+    }                                                          // End loop over bodies
     //! Loop over children and recurse
     real_t Xchild[3];                               // Coordinates of children
     cells.resize(cells.size() + cell->NCHILD);      // Resize cell vector

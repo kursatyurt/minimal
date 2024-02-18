@@ -29,7 +29,8 @@ namespace exafmm
   }
 
   //! Spherical to cartesian coordinates
-  void sph2cart(real_t r, real_t theta, real_t phi, real_t *spherical, real_t *cartesian)
+  template <class T>
+  void sph2cart(real_t r, real_t theta, real_t phi, T *spherical, T *cartesian)
   {
     cartesian[0] = std::sin(theta) * std::cos(phi) * spherical[0] // x component (not x itself)
                    + std::cos(theta) * std::cos(phi) / r * spherical[1] - std::sin(phi) / r / std::sin(theta) * spherical[2];
@@ -158,7 +159,7 @@ namespace exafmm
     }       // End loop over in j in Cjknm
   }
 
-  void P2P(Cell *Ci, Cell *Cj)
+  void P2PS(Cell *Ci, Cell *Cj)
   {
     Body *Bi = Ci->BODY;
     Body *Bj = Cj->BODY;
@@ -166,7 +167,6 @@ namespace exafmm
     int nj = Cj->NBODY;
     for (int i = 0; i < ni; i++)
     {
-      real_t pot = 0;
       real_t ax = 0;
       real_t ay = 0;
       real_t az = 0;
@@ -177,17 +177,139 @@ namespace exafmm
         real_t R2 = norm(dX);
         if (R2 != 0)
         {
-          // real_t S2 = 2 * Bj[j].q * Bj[j].q; //    2 * sigma^2
-          // real_t RS = R2 / S2;               //    R^2 / (2 * simga^2)
-          //      real cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf( std::sqrt(RS) )// cutoff function
-          //                  - std::sqrt(4 / M_PI * RS) * exp(-RS));
-          real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2);
+          real_t S2 = 2 * Bj[j].radius * Bj[j].radius;                           //   2 * simga^2
+          real_t RS = R2 / S2;                                                   //   R^2 / (2 * sigma^2)
+          real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf(std::sqrt(RS)) // cutoff function for first term
+                                                              - std::sqrt(4 / M_PI * RS) * exp(-RS));
+
+          ax += (Bi[i].alpha[1] * Bj[j].alpha[2] - Bi[i].alpha[2] * Bj[j].alpha[1]) * cutoff; // x component of first term
+
+          ay += (Bi[i].alpha[2] * Bj[j].alpha[0] - Bi[i].alpha[0] * Bj[j].alpha[2]) * cutoff; // y component of first term
+
+          az += (Bi[i].alpha[0] * Bj[j].alpha[1] - Bi[i].alpha[1] * Bj[j].alpha[0]) * cutoff; // z component of first term
+          cutoff = 0.25 / M_PI / R2 / R2 / std::sqrt(R2) * (3 * erf(std::sqrt(RS))            // cutoff function for second term
+                                                            - (2 * RS + 3) * std::sqrt(4 / M_PI * RS) * exp(-RS)) *
+                   (Bi[i].alpha[0] * dX[0] + Bi[i].alpha[1] * dX[1] + Bi[i].alpha[2] * dX[2]);
+
+          ax += (Bj[j].alpha[1] * dX[2] - Bj[j].alpha[2] * dX[1]) * cutoff; // x component of second term
+
+          ay += (Bj[j].alpha[2] * dX[0] - Bj[j].alpha[0] * dX[2]) * cutoff; // y component of second term
+
+          az += (Bj[j].alpha[0] * dX[1] - Bj[j].alpha[1] * dX[0]) * cutoff; // z component of second term
+        }
+      }
+      Bi[i].dadt[0] -= ax;
+      Bi[i].dadt[1] -= ay;
+      Bi[i].dadt[2] -= az;
+    }
+  }
+
+  void P2MS(Cell *C)
+  {
+    complex_t Ynm[P * P], YnmTheta[P * P];
+    for (Body *B = C->BODY; B != C->BODY + C->NBODY; B++)
+    {
+      {
+        for (int d = 0; d < 3; d++)
+          dX[d] = B->X[d] - C->X[d];
+        complex_t spherical[3];
+        complex_t cartesian[3];
+        real_t rho, alpha, beta;
+        cart2sph(dX, rho, alpha, beta);
+        evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
+        for (int n = 0; n < P; n++)
+        {
+          for (int m = 0; m <= n; m++)
+          {
+            int nm = n * n + n + m;
+            int nms = n * (n + 1) / 2 + m;
+            spherical[0] = Ynm[nm] * double(n / rho);
+            spherical[1] = YnmTheta[nm];
+            spherical[2] = -Ynm[nm] * I * double(m);
+            sph2cart(rho, alpha, beta, spherical, cartesian);
+            C->M[3 * nms + 0] += cartesian[2] * double(B->alpha[1]) - cartesian[1] * double(B->alpha[2]);
+            C->M[3 * nms + 1] += cartesian[0] * double(B->alpha[2]) - cartesian[2] * double(B->alpha[0]);
+            C->M[3 * nms + 2] += cartesian[1] * double(B->alpha[0]) - cartesian[0] * double(B->alpha[1]);
+          }
+        }
+      }
+    }
+  }
+
+  void L2PS(Cell *Ci)
+  {
+    {
+      complex_t Ynm[P * P], YnmTheta[P * P];
+      for (Body *B = Ci->BODY; B != Ci->BODY + Ci->NBODY; B++)
+      {
+        for (int d = 0; d < 3; d++)
+          dX[d] = B->X[d] - Ci->X[d];
+        real_t spherical[3][3]{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+        real_t cartesian[3][3]{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+        real_t r, theta, phi;
+        cart2sph(dX, r, theta, phi);
+        evalMultipole(r, theta, phi, Ynm, YnmTheta);
+        for (int n = 0; n < P; n++)
+        {
+          int nm = n * n + n;
+          int nms = n * (n + 1) / 2;
+          for (int d = 0; d != 3; ++d)
+          {
+            spherical[d][0] += (Ci->L[3 * nms + d] * Ynm[nm]).real() / r * n;
+            spherical[d][1] += (Ci->L[3 * nms + d] * YnmTheta[nm]).real();
+          }
+          for (int m = 1; m <= n; m++)
+          {
+            nm = n * n + n + m;
+            nms = n * (n + 1) / 2 + m;
+            for (int d = 0; d != 3; ++d)
+            {
+              spherical[d][0] += 2 * std::real(Ci->L[3 * nms + d] * Ynm[nm]) / r * n;
+              spherical[d][1] += 2 * std::real(Ci->L[3 * nms + d] * YnmTheta[nm]);
+              spherical[d][2] += 2 * std::real(Ci->L[3 * nms + d] * Ynm[nm] * I) * m;
+            }
+          }
+        }
+        for (int d = 0; d != 3; ++d)
+        {
+          sph2cart(r, theta, phi, spherical[d], cartesian[d]);
+        }
+        B->dadt[0] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][0] + B->alpha[1] * cartesian[1][0] + B->alpha[2] * cartesian[2][0]);
+        B->dadt[1] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][1] + B->alpha[1] * cartesian[1][1] + B->alpha[2] * cartesian[2][1]);
+        B->dadt[2] += 0.25 / M_PI * (B->alpha[0] * cartesian[0][2] + B->alpha[1] * cartesian[1][2] + B->alpha[2] * cartesian[2][2]);
+      }
+    }
+  }
+
+  void P2P(Cell *Ci, Cell *Cj)
+  {
+    Body *Bi = Ci->BODY;
+    Body *Bj = Cj->BODY;
+    int ni = Ci->NBODY;
+    int nj = Cj->NBODY;
+    for (int i = 0; i < ni; i++)
+    {
+      // real_t pot = 0;
+      real_t ax = 0;
+      real_t ay = 0;
+      real_t az = 0;
+      for (int j = 0; j < nj; j++)
+      {
+        for (int d = 0; d < 3; d++)
+          dX[d] = Bi[i].X[d] - Bj[j].X[d];
+        real_t R2 = norm(dX);
+        if (R2 != 0)
+        {
+          real_t S2 = 2 * Bj[j].radius * Bj[j].radius; //    2 * sigma^2
+          real_t RS = R2 / S2;                         //    R^2 / (2 * simga^2)
+          real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf(std::sqrt(RS)) - std::sqrt(4 / M_PI * RS) * exp(-RS));
+          // real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2);
           ax += (dX[1] * Bj[j].alpha[2] - dX[2] * Bj[j].alpha[1]) * cutoff; // x component of curl G * cutoff
           ay += (dX[2] * Bj[j].alpha[0] - dX[0] * Bj[j].alpha[2]) * cutoff; // y component of curl G * cutoff
           az += (dX[0] * Bj[j].alpha[1] - dX[1] * Bj[j].alpha[0]) * cutoff; // z component of curl G * cutof
         }
       }
-      Bi[i].p += pot;
+      // Bi[i].p += pot;
       Bi[i].velocity[0] -= ax;
       Bi[i].velocity[1] -= ay;
       Bi[i].velocity[2] -= az;
