@@ -266,7 +266,7 @@ namespace exafmm
         real_t R2 = norm(dX);
         if (R2 != 0)
         {
-          real_t S2 = 2;                                                         //   2 * simga^2
+          real_t S2 = 2 *Bj[j].radius *Bj[j].radius;                                                         //   2 * simga^2
           real_t RS = R2 / S2;                                                   //   R^2 / (2 * sigma^2)
           real_t cutoff = 0.25 / M_PI / R2 / std::sqrt(R2) * (erf(std::sqrt(RS)) // cutoff function for first term
                                                               - std::sqrt(4 / M_PI * RS) * exp(-RS));
